@@ -48,19 +48,19 @@ class DAQ_Move_LTS150(DAQ_Move_base):
 
     params = [{'title': 'Serial number:', 'name': 'serial_number', 'type': 'str', 'value': '45922740', 'readonly': True},
               {'title': 'Home Position:', 'name': 'home_position', 'type': 'float', 'value': 0.0},
-              {'title': 'Speed:', 'name': 'speed', 'type': 'float', 'value': 0.0}
+              {'title': 'Position scaling:', 'name': 'pos_scale', 'type': 'float', 'value': 409600},
+              {'title': 'Speed scaling:', 'name': 'speed_scale', 'type': 'float', 'value': 21987328},
+              {'title': 'Acceleration scaling:', 'name': 'acc_scale', 'type': 'float', 'value': 4506}
+
              ] + comon_parameters_fun(is_multiaxes, axis_names=_axis_names, epsilon=_epsilon)
 
     # _epsilon is the initial default value for the epsilon parameter allowing pymodaq to know if the controller reached
     # the target value. It is the developer responsibility to put here a meaningful value
 
     def ini_attributes(self):
-        #  TODO declare the type of the wrapper (and assign it to self.controller) you're going to use for easy
-        #  autocompletion
+
         self.controller: Thorlabs.KinesisMotor(self.settings.child('serial_number').value()) = None
 
-        # TODO declare here attributes you want/need to init with a default value
-        pass
 
     def get_actuator_value(self):
         """Get the current value from the hardware with scaling conversion.
@@ -89,7 +89,7 @@ class DAQ_Move_LTS150(DAQ_Move_base):
         param: Parameter
             A given parameter (within detector_settings) whose value has been changed by the user
         """
-        ## TODO for your custom plugin
+
         if param.name() == "a_parameter_you've_added_in_self.params":
             self.controller.your_method_to_apply_this_param_change()
         else:
@@ -112,7 +112,7 @@ class DAQ_Move_LTS150(DAQ_Move_base):
         ratio = 61440000/150 #steps to mm
         #raise NotImplemented  # TODO when writing your own plugin remove this line and modify the one below
 
-        sscale = (409600, 21987328, 4506)
+        sscale = (self.settings.child('pos_scale').value(), self.settings.child('speed_scale').value(), self.settings.child('acc_scale').value())
         self.controller = self.ini_stage_init(old_controller=controller,
                                               new_controller=Thorlabs.KinesisMotor(self.settings.child('serial_number').value(), scale=sscale))
 
