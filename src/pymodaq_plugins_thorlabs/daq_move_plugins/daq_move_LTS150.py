@@ -183,7 +183,7 @@ class DAQ_Move_LTS150(DAQ_Move_base):
         self.controller.wait_for_home(channel=None, timeout=None)
         self.emit_status(ThreadCommand('Update_Status', ['Home']))
         #print("home " , home)
-
+#stop
     def stop_motion(self):
 
         self.controller.stop(immediate=False, sync=True, channel=None, timeout=None)  # when writing your own plugin replace this line
