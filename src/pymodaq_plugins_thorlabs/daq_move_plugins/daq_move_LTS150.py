@@ -74,7 +74,7 @@ class DAQ_Move_LTS150(DAQ_Move_base):
          #   data=self.controller.get_position(scale=True))
         pos = self.controller.get_position(scale=True)
         pos = self.get_position_with_scaling(pos)
-        #print(pos)
+
         return pos
 
     def close(self):
@@ -119,11 +119,7 @@ class DAQ_Move_LTS150(DAQ_Move_base):
         info = self.controller.get_device_info()
         initialized = True
         #initialized = self.controller.a_method_or_atttribute_to_check_if_init()  # todo
-        #print("bla")
-        print("vel param", self.controller.get_velocity_parameters(channel=None, scale=True))
-        print("scale", self.controller.get_scale())
-        print("stage", self.controller.get_stage())
-        print("homing param ", self.controller.get_homing_parameters(channel=None, scale=True))
+
         return info.notes, initialized
 
     def move_abs(self, value: DataActuator):
@@ -137,7 +133,7 @@ class DAQ_Move_LTS150(DAQ_Move_base):
         value = self.check_bound(value)  # if user checked bounds, the defined bounds are applied here
         self.target_value = value
         value = self.set_position_with_scaling(value)  # apply scaling if the user specified one
-        print(value)
+
         #self.controller.move_to(
         #    value, scale=True)
         currentpos = self.get_actuator_value()
