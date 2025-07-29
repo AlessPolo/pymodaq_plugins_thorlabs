@@ -1,6 +1,9 @@
 """
 PyMoDAQ plugin for thorlabs instruments based on the TLPM library allowing
-remote control and monitoring of up to eight power and energy meters.
+remote control and monitoring of up to eight power and energy meters together with a
+lock-in measurement controlled via a YoctoServo. A wrapper is coded for a Yoctopuce chip.
+Further documentation at: https://www.yoctopuce.com/.
+
 This software is compatible with our Power Meter Consoles and Interfaces (PM100A and PM101 Series),
 Power and Energy Meter Consoles and Interfaces (PM100D, PM400, PM100USB, PM103 Series, and legacy PM200),
 Position & Power Meter Interfaces (PM102 Series),
@@ -35,7 +38,6 @@ from pymodaq_gui.parameter import Parameter
 from yoctopuce.yocto_api import YAPI, YRefParam
 from yoctopuce.yocto_servo import YServo
 
-#from pymodaq_plugins_thorlabs.daq_move_plugins.daq_move_YoctoServo import DAQ_Move_YoctoServo
 from pymodaq.utils.data import Axis
 
 
@@ -165,16 +167,13 @@ class DAQ_0DViewer_TLPMPowermeterLockInServo(DAQ_Viewer_base):
             t0 = time.time()
 
             for i in range(n_cycles):
-                print(f"Cycle {i + 1} / {n_cycles} - Moving servo to 1000")
                 self.servo.move_absolute(1000)
                 time.sleep(0.1)
 
                 start = time.time()
-                print(f"Cycle {i + 1} - Reading ON powers")
                 while time.time() - start < half_cycle:
                     try:
                         power = self.controller.get_power()
-                        print(f"Power ON: {power}")
                         on_powers.append(power)
                         trace_times.append(time.time() - t0)
                         trace_powers.append(power)
@@ -182,14 +181,11 @@ class DAQ_0DViewer_TLPMPowermeterLockInServo(DAQ_Viewer_base):
                         print(f"Error while reading power: {e}")
                     time.sleep(0.01)
 
-                print(f"Cycle {i + 1} - Moving servo to -1000")
                 self.servo.move_absolute(-1000)
 
                 start = time.time()
-                print(f"Cycle {i + 1} - Reading OFF powers")
                 while time.time() - start < half_cycle:
                     power = self.controller.get_power()
-                    print(f"Power OFF: {power}")
                     off_powers.append(power)
                     trace_times.append(time.time() - t0)
                     trace_powers.append(power)
@@ -198,12 +194,10 @@ class DAQ_0DViewer_TLPMPowermeterLockInServo(DAQ_Viewer_base):
                         f"No power data acquired. on_powers={len(on_powers)}, off_powers={len(off_powers)}. "
                         "Cycle time may be too short, or sensor may not be ready.")
 
-            print("Calculating lock-in signal")
             lockin_signal = np.mean(on_powers) - np.mean(off_powers)
 
             x_axis = Axis(label='Time', units='s', data=np.array(trace_times))
             y_data = np.array(trace_powers)
-            print(f"x_axis length: {len(x_axis)}, y_data length: {len(y_data)}")
             assert x_axis.get_data().shape == y_data.shape, f"x={x_axis.get_data().shape}, y={y_data.shape}"
 
             data_trace = DataFromPlugins(name='Power trace',
@@ -217,9 +211,8 @@ class DAQ_0DViewer_TLPMPowermeterLockInServo(DAQ_Viewer_base):
                                           dim='Data0D',
                                           labels=['ΔPower (W)'])
 
-            print(f"Emitting {len(trace_times)} points")
             self.data_grabed_signal.emit([data_trace, data_lockin])
-            print("Data emitted successfully")
+            self.servo.move_absolute(1000) #OPENING SERVO AT THE END OF THE MEASURE
 
         except Exception as e:
             print(f"[ERROR in grab_data]: {e}")
