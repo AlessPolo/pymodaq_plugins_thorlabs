@@ -167,11 +167,17 @@ class DAQ_0DViewer_TLPMPowermeterLockInServo(DAQ_Viewer_base):
             t0 = time.time()
 
             for i in range(n_cycles):
+                # --- ON cycle ---
                 self.servo.move_absolute(1000)
                 time.sleep(0.1)
 
                 start = time.time()
                 while time.time() - start < half_cycle:
+                    elapsed = time.time() - start
+                    if elapsed < 1.0:  # discard first second
+                        time.sleep(0.01)
+                        continue
+
                     try:
                         power = self.controller.get_power()
                         on_powers.append(power)
@@ -181,18 +187,30 @@ class DAQ_0DViewer_TLPMPowermeterLockInServo(DAQ_Viewer_base):
                         print(f"Error while reading power: {e}")
                     time.sleep(0.01)
 
+                # --- OFF cycle ---
                 self.servo.move_absolute(-1000)
+                time.sleep(0.1)
 
                 start = time.time()
                 while time.time() - start < half_cycle:
-                    power = self.controller.get_power()
-                    off_powers.append(power)
-                    trace_times.append(time.time() - t0)
-                    trace_powers.append(power)
-                if len(on_powers) == 0 or len(off_powers) == 0:
-                    raise ValueError(
-                        f"No power data acquired. on_powers={len(on_powers)}, off_powers={len(off_powers)}. "
-                        "Cycle time may be too short, or sensor may not be ready.")
+                    elapsed = time.time() - start
+                    if elapsed < 1.0:  # discard first second
+                        time.sleep(0.01)
+                        continue
+
+                    try:
+                        power = self.controller.get_power()
+                        off_powers.append(power)
+                        trace_times.append(time.time() - t0)
+                        trace_powers.append(power)
+                    except Exception as e:
+                        print(f"Error while reading power: {e}")
+                    time.sleep(0.01)
+
+            if len(on_powers) == 0 or len(off_powers) == 0:
+                raise ValueError(
+                    f"No power data acquired. on_powers={len(on_powers)}, off_powers={len(off_powers)}. "
+                    "Cycle time may be too short, or sensor may not be ready.")
 
             lockin_signal = np.mean(on_powers) - np.mean(off_powers)
 
@@ -212,11 +230,13 @@ class DAQ_0DViewer_TLPMPowermeterLockInServo(DAQ_Viewer_base):
                                           labels=['ΔPower (W)'])
 
             self.data_grabed_signal.emit([data_trace, data_lockin])
-            self.servo.move_absolute(1000) #OPENING SERVO AT THE END OF THE MEASURE
+            self.servo.move_absolute(1000)  # OPENING SERVO AT THE END OF THE MEASURE
 
         except Exception as e:
             print(f"[ERROR in grab_data]: {e}")
             self.emit_status(ThreadCommand('Update_Status', [getLineInfo() + str(e), 'log']))
+
+
 
     def stop(self):
         """
